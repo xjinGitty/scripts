@@ -14,12 +14,9 @@ teamMem = ['xdzhang@suse.com', 'xjin@suse.com','yfjiang@suse.com','ychen@suse.co
 validreso = ['FIXED','UPSTEAM','NORESPONSE','---','MOVED']
 invalidreso = ['INVALID','WONTFIX','DUPLICATE','FEATURE','WORKSFORME']
 
-comp = prods.find({})
-comp = [i['component'] for i in comp]
-comps = set(comp)
-#### component excludes
-#### query range shrink
-#### 
+compA = prods.find({'product':{'$in':prod_all} })
+compl = [i['component'] for i in compA]
+comps = set(compl)
 
 ### EBR specific data structure
 teamBugA = {}
@@ -38,20 +35,20 @@ for prod in prod_all:
 #======================EBR data==========================
 ### EBR related statistic: we just consider for bugs reported by QA APACI
 ## all bug number
-    tmp = prods.find({'product': prod,'creator': {'$in':teamMem} }).count()
-    teamBugA[prod] = tmp 
+    teamA = prods.find({'product': prod,'creator': {'$in':teamMem} }).count()
+    teamBugA[prod] = teamA 
 
 ## valid bug number
-    TVratio = prods.find({'product': prod,'creator': {'$in': teamMem},'resolution':{'$in': validreso},'severity':{'$ne':'Enhancement'} }).count()
-    teamBugV[prod] = tmp 
+    teamV = prods.find({'product': prod,'creator': {'$in': teamMem},'resolution':{'$in': validreso},'severity':{'$ne':'Enhancement'} }).count()
+    teamBugV[prod] = teamV 
 
 ## EBR ratio
-#    TVratio = $((teamV/teamA))
+    TVratio = teamV/teamA
     teamValidRatio[prod] = TVratio
 
 ## invalid bug number statistic
 # all invalid bug number
-#    teamI = $((teamA - teamV))
+    teamI = teamA - teamV
 # INVALID # WONTFIX # DUPLICATE # WORKSFORME # bug num
     tmpDict = teamInvalidNum.setdefault(prod, {})
     for reso in invalidreso:
@@ -59,22 +56,24 @@ for prod in prod_all:
         tmpDict[reso] = tmp
 #== each invalid type/all ratio??==#== each invalid type/all invalid ratio??
         tmpTypeRatio = reso+'InAllratio'
-#        tmpDict[tmpTypeRatio] = $((tmp/teamA))
+        tmpDict[tmpTypeRatio] = tmp/teamA
         temInvalidRatio = reso+'InAllInvalidRatio'
-#        tmpDict[temInvalidRatio] = $((tmp/teamI))
+        tmpDict[temInvalidRatio] = tmp/teamI
 ## ENHANCEMENT
     temEnhance = prods.find({'product': prod,'creator': {'$in': teamMem},'severity':'Enhancement'}).count()
     tmpDict['EnhanceSeve'] = temEnhance
-#    tmpDict['EnhanceSeveAllRatio'] = $((temEnhance/teamA))
-#    tmpDict['EnhanceSeveInvalidRatio'] = $((temEnhance/teamI))
+    tmpDict['EnhanceSeveAllRatio'] = temEnhance/teamA
+    tmpDict['EnhanceSeveInvalidRatio'] = temEnhance/teamI
 
 ## each component invalid/ total invalid ratio
     temCompDict = teamInvalidComp.setdefault(prod,{})
     for comp in comps:
         temComp = prods.find({'product': prod,'creator': {'$in': teamMem},'component':comp,'resolution': {'$in':invalidreso}, 'severity':'Enhancement' }).count()
+        if temComp == 0:
+            continue
         temCompDict[comp] = temComp
         temComIN = comp + 'inAllInvalidRatio'
-#        temCompDict[temComIN] = $((temComp/teamI))
+        temCompDict[temComIN] = temComp/teamI
 ## component whose number is less than 5
     # there needs function like sort to make number sequence??
 
@@ -89,27 +88,28 @@ for prod in prod_all:
     totalBugV[prod] = totalV
 
 ## expend: all valid/ total valid to compare with EBR
-#    totalValidRatio[prod] = $((totalV/totalA))
+    totalValidRatio[prod] = totalV/totalA
 
 ## component valid bug ratio: component valid/ component total
     temTotalDict = totalValidComp.setdefault(prod,{})
     for comp in comps:
 # component valid
         temVComp = prods.find({'product': prod,'component':comp,'resolution': {'$in':validreso}, 'severity':{'$ne':'Enhancement'} }).count()
-        temTotalDict[comp] = temVComp
 # component total
         temAComp = prods.find({'product': prod,'component':comp }).count()
-        temTotalComAll = comp + 'All'
-        temTotalDict[temTotalComAll ] = temAComp 
+        while [ temVComp and temAComp ]:
+            temTotalDict[comp] = temVComp
+            temTotalComAll = comp + 'All'
+            temTotalDict[temTotalComAll ] = temAComp 
 # valid ratio
-        temTotalCom = comp + 'validRatio'
-#        temTotalDict[temTotalCom] = $((temVComp/temAcomp))
+            temTotalCom = comp + 'validRatio'
+            temTotalDict[temTotalCom] = temVComp/temAComp
 # valid per component ratio: component valid/ all valid
-        temTotalComA = comp + 'inAllValid'
-#        temTotalDict[temTotalComA ] = $((temVComp/totalV))
+            temTotalComA = comp + 'inAllValid'
+            temTotalDict[temTotalComA ] = temVComp/totalV
 ## expend: component valid/ all to compare with EBR
-        temTotalComAA = comp + 'inAll'
-#        temTotalDict[temTotalComAA] = $((temVComp/totalA))
+            temTotalComAA = comp + 'inAll'
+            temTotalDict[temTotalComAA] = temVComp/totalA
 
 # format print
 'num of total bugs reported by QA APACI is: {0}'
@@ -121,14 +121,12 @@ for prod in prod_all:
 #                          '    APPEND initrd={1}initrd install={2}\n'.format(
 #                                  label, ploader, repo)
 
-print(str(teamBugA))
-print(str(teamBugV))
-print(str(teamValidRatio))
-print(str(teamInvalidNum))
-print(str(totalBugA))
-print(str(totalBugV))
-print(str(totalValidRatio))
-print(str(totalValidComp))
-print(str(teamInvalidComp))
-
+pprint(teamBugA)
+pprint(teamBugV)
+pprint(teamValidRatio)
+pprint(teamInvalidNum)
+pprint(totalBugA)
+pprint(totalBugV)
+pprint(totalValidRatio)
 pprint(totalValidComp)
+pprint(teamInvalidComp)
