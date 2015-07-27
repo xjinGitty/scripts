@@ -1,4 +1,5 @@
 #! /usr/bin/python3
+from time import sleep
 from pprint import pprint
 from pymongo import MongoClient
 client = MongoClient('mongodb://147.2.212.204:27017/')
@@ -31,11 +32,15 @@ totalBugV = {}
 totalValidRatio = {}
 totalValidComp = {}
 
+def RatioConvert(arg):
+   return str(arg * 100)[:5]+ '%'
+
 for prod in prod_all:
 #======================EBR data==========================
 ### EBR related statistic: we just consider for bugs reported by QA APACI
 ## all bug number
     teamA = prods.find({'product': prod,'creator': {'$in':teamMem} }).count()
+#    teamAL = [teamAL.expand(i) for i in compA if i['product'] == prod and i['creator'] in teamMem]
     teamBugA[prod] = teamA 
 
 ## valid bug number
@@ -43,7 +48,7 @@ for prod in prod_all:
     teamBugV[prod] = teamV 
 
 ## EBR ratio
-    TVratio = teamV/teamA
+    TVratio = RatioConvert(teamV/teamA)
     teamValidRatio[prod] = TVratio
 
 ## invalid bug number statistic
@@ -56,14 +61,14 @@ for prod in prod_all:
         tmpDict[reso] = tmp
 #== each invalid type/all ratio??==#== each invalid type/all invalid ratio??
         tmpTypeRatio = reso+'InAllratio'
-        tmpDict[tmpTypeRatio] = tmp/teamA
+        tmpDict[tmpTypeRatio] = RatioConvert(tmp/teamA)
         temInvalidRatio = reso+'InAllInvalidRatio'
-        tmpDict[temInvalidRatio] = tmp/teamI
+        tmpDict[temInvalidRatio] = RatioConvert(tmp/teamI)
 ## ENHANCEMENT
     temEnhance = prods.find({'product': prod,'creator': {'$in': teamMem},'severity':'Enhancement'}).count()
     tmpDict['EnhanceSeve'] = temEnhance
-    tmpDict['EnhanceSeveAllRatio'] = temEnhance/teamA
-    tmpDict['EnhanceSeveInvalidRatio'] = temEnhance/teamI
+    tmpDict['EnhanceSeveAllRatio'] = RatioConvert(temEnhance/teamA)
+    tmpDict['EnhanceSeveInvalidRatio'] = RatioConvert(temEnhance/teamI)
 
 ## each component invalid/ total invalid ratio
     temCompDict = teamInvalidComp.setdefault(prod,{})
@@ -73,7 +78,7 @@ for prod in prod_all:
             continue
         temCompDict[comp] = temComp
         temComIN = comp + 'inAllInvalidRatio'
-        temCompDict[temComIN] = temComp/teamI
+        temCompDict[temComIN] = RatioConvert(temComp/teamI)
 ## component whose number is less than 5
     # there needs function like sort to make number sequence??
 
@@ -88,7 +93,7 @@ for prod in prod_all:
     totalBugV[prod] = totalV
 
 ## expend: all valid/ total valid to compare with EBR
-    totalValidRatio[prod] = totalV/totalA
+    totalValidRatio[prod] = RatioConvert(totalV/totalA)
 
 ## component valid bug ratio: component valid/ component total
     temTotalDict = totalValidComp.setdefault(prod,{})
@@ -97,19 +102,21 @@ for prod in prod_all:
         temVComp = prods.find({'product': prod,'component':comp,'resolution': {'$in':validreso}, 'severity':{'$ne':'Enhancement'} }).count()
 # component total
         temAComp = prods.find({'product': prod,'component':comp }).count()
-        while [ temVComp and temAComp ]:
-            temTotalDict[comp] = temVComp
+        if temVComp and temAComp:
+            temTotalComValid = comp + 'Valid'
+            temTotalDict[temTotalComValid ] = temVComp
             temTotalComAll = comp + 'All'
             temTotalDict[temTotalComAll ] = temAComp 
 # valid ratio
             temTotalCom = comp + 'validRatio'
-            temTotalDict[temTotalCom] = temVComp/temAComp
+            temTotalDict[temTotalCom] = RatioConvert(temVComp/temAComp)
 # valid per component ratio: component valid/ all valid
-            temTotalComA = comp + 'inAllValid'
-            temTotalDict[temTotalComA ] = temVComp/totalV
+            temTotalComA = comp + 'ValidInAllValid'
+            temTotalDict[temTotalComA ] = RatioConvert(temVComp/totalV)
 ## expend: component valid/ all to compare with EBR
-            temTotalComAA = comp + 'inAll'
-            temTotalDict[temTotalComAA] = temVComp/totalA
+            temTotalComAA = comp + 'ValidInAll'
+            temTotalDict[temTotalComAA] = RatioConvert(temVComp/totalA)
+
 
 # format print
 'num of total bugs reported by QA APACI is: {0}'
@@ -121,12 +128,32 @@ for prod in prod_all:
 #                          '    APPEND initrd={1}initrd install={2}\n'.format(
 #                                  label, ploader, repo)
 
-pprint(teamBugA)
-pprint(teamBugV)
-pprint(teamValidRatio)
-pprint(teamInvalidNum)
-pprint(totalBugA)
-pprint(totalBugV)
-pprint(totalValidRatio)
-pprint(totalValidComp)
-pprint(teamInvalidComp)
+# pprint(teamBugA)
+# pprint(teamBugV)
+# pprint(teamValidRatio)
+##pprint(teamInvalidNum)
+##pprint(teamInvalidComp)
+# pprint(totalBugA)
+# pprint(totalBugV)
+# pprint(totalValidRatio)
+##pprint(totalValidComp)
+def printDF(arg):
+    for i in arg:
+        printString = "    " + i + " | {" + i + "}"
+        print(printString.format(**arg))
+
+dataPara1 = ["teamBugA", "teamBugV", "teamValidRatio", "totalBugA", "totalBugV", "totalValidRatio"]
+dataPara2 = ["teamInvalidNum", "teamInvalidComp", "totalValidComp"]
+dataDc1 = [teamBugA, teamBugV, teamValidRatio, totalBugA, totalBugV, totalValidRatio]
+dataDc2 = [teamInvalidNum, teamInvalidComp, totalValidComp]
+def printFF(dataDc, dataPara):
+    for j in dataDc: 
+        item = dataPara.pop(0)
+        print("\n")
+        print('###' + item)
+        print('    product | bugNum/ Ratio')
+        print('    ---|---')
+        printDF(j)
+
+printFF(dataDc1,dataPara1)
+printFF(dataDc2,dataPara2)
