@@ -1,4 +1,8 @@
 #! /usr/bin/python3
+import matplotlib
+matplotlib.use("PS")
+import matplotlib.pyplot as plt
+import numpy as np
 from time import sleep
 from pprint import pprint
 from pymongo import MongoClient
@@ -146,6 +150,8 @@ def printFD(dicD,item):
 [printFD(i,dataPara.pop(0)) for i in dataDc]
 
 #=========================Python to chart==============================
+def chartF(dct):
+
 ## team all/ valid/ validRatio
 
 ## team invalid type
@@ -156,3 +162,40 @@ def printFD(dicD,item):
 ## total all/ valid/ validRatio
 
 ## total valid component
+import numpy as np
+import matplotlib
+#matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+def charDF(prodList,tableList,lableList):
+    N = 5
+    ind = np.arange(N)  # the x locations for the groups
+    width = 0.25       # the width of the bars
+    
+    fig, ax = plt.subplots()
+    rects1 = ax.bar(ind, prodList[0], width, color='r')
+    rects2 = ax.bar(ind+width, prodList[1], width, color='y')
+    rects3 = ax.bar(ind+2*width, prodList[2], width, color='b')
+    
+    # add some text for labels, title and axes ticks
+    ax.set_ylabel('Bug Number')
+    ax.set_title(lableList.pop(0))
+    ax.set_xticks(ind+width)
+    ax.set_xticklabels( tableList )
+    
+    ax.legend( (rects1[0], rects2[0], rects3[0]), prodList)
+    
+    def autolabel(rects):
+        # attach some text labels
+        for rect in rects:
+            height = rect.get_height()
+            ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height),
+                    ha='center', va='bottom')
+    
+    autolabel(rects1)
+    autolabel(rects2)
+    
+    #plt.show()
+    plt.savefig("foo1.png")
+    
+
