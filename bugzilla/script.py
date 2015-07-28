@@ -5,7 +5,7 @@ from pymongo import MongoClient
 client = MongoClient('mongodb://147.2.212.204:27017/')
 prods = client.bz.prods
 
-# all data structure
+# common data structure
 prod_all = [  'SUSE Linux Enterprise Desktop 12',
               'SUSE Linux Enterprise Desktop 11 SP3',
               'SUSE Linux Enterprise Desktop 11 SP4 (SLED 11 SP4)']
@@ -19,14 +19,14 @@ compA = prods.find({'product':{'$in':prod_all} })
 compl = [i['component'] for i in compA]
 comps = set(compl)
 
-### EBR specific data structure
+# EBR specific data structure
 teamBugA = {}
 teamBugV = {}
 teamValidRatio = {}
 teamInvalidNum = {}
 teamInvalidComp = {}
 
-### product level specific data structure
+# product level specific data structure
 totalBugA = {}
 totalBugV = {}
 totalValidRatio = {}
@@ -118,42 +118,41 @@ for prod in prod_all:
             temTotalDict[temTotalComAA] = RatioConvert(temVComp/totalA)
 
 
-# format print
-'num of total bugs reported by QA APACI is: {0}'
+#=========================Data Statistic Output==============================
+dataPara = ["teamBugA", "teamBugV", "teamValidRatio", "teamInvalidNum", "teamInvalidComp", "totalBugA", "totalBugV", "totalValidRatio", "totalValidComp"]
+dataDc = [teamBugA, teamBugV, teamValidRatio, teamInvalidNum, teamInvalidComp, totalBugA, totalBugV, totalValidRatio, totalValidComp]
 
-
-#                pxeitem = 'LABEL {0}\n' \
-#                          '    MENU LABEL {0}\n' \
-#                          '    KERNEL {1}linux\n' \
-#                          '    APPEND initrd={1}initrd install={2}\n'.format(
-#                                  label, ploader, repo)
-
-# pprint(teamBugA)
-# pprint(teamBugV)
-# pprint(teamValidRatio)
-##pprint(teamInvalidNum)
-##pprint(teamInvalidComp)
-# pprint(totalBugA)
-# pprint(totalBugV)
-# pprint(totalValidRatio)
-##pprint(totalValidComp)
-def printDF(arg):
-    for i in arg:
-        printString = "    " + i + " | {" + i + "}"
-        print(printString.format(**arg))
-
-dataPara1 = ["teamBugA", "teamBugV", "teamValidRatio", "totalBugA", "totalBugV", "totalValidRatio"]
-dataPara2 = ["teamInvalidNum", "teamInvalidComp", "totalValidComp"]
-dataDc1 = [teamBugA, teamBugV, teamValidRatio, totalBugA, totalBugV, totalValidRatio]
-dataDc2 = [teamInvalidNum, teamInvalidComp, totalValidComp]
-def printFF(dataDc, dataPara):
-    for j in dataDc: 
-        item = dataPara.pop(0)
+def printFD(dicD,item):
+    print("\n")
+    print(item)
+    print("===")
+    if isinstance(list(dicD.values())[0],dict):
         print("\n")
-        print('###' + item)
-        print('    product | bugNum/ Ratio')
-        print('    ---|---')
-        printDF(j)
+        print('product | InvalidType/ Component | BugNum/ Ratio')
+        print(':---|---|---')
+    else:
+        print("\n")
+        print('product | Num/ Ratio')
+        print(':---|---')
+      
+    for i in sorted(dicD):
+        tmpD = dicD.setdefault(i,dicD[i])
+        if isinstance(tmpD,dict):
+            for j in sorted(tmpD):
+                print('{} | {} | {}'.format(i,j,tmpD[j]))
+        else:
+            print('{} | {}'.format(i,dicD[i]))
 
-printFF(dataDc1,dataPara1)
-printFF(dataDc2,dataPara2)
+[printFD(i,dataPara.pop(0)) for i in dataDc]
+
+#=========================Python to chart==============================
+## team all/ valid/ validRatio
+
+## team invalid type
+
+## team invalid component
+
+
+## total all/ valid/ validRatio
+
+## total valid component
