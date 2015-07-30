@@ -39,11 +39,21 @@ totalBugV = {}
 totalValidRatio = {}
 totalValidComp = {}
 
-# result store
+# pre-define function
+def compSelect(D):
+    dictT = {}
+    listT = []
+    for prod in prod_all:
+        for comp in comps:
+            dictT[comp+'InAllRatiotrue'] = D[prod][comp+'InAllRatiotrue']
+        listT.append( sorted(dictT,key=itemgetter(1)) )
+    
+    return [comp for comp in listT[0] if comp in listT[1] and comp in listT[2]][:20]
 
 def RatioConvert(arg):
-   return str(arg * 100)[:5]+ '%'
+    return str(arg * 100)[:5]+ '%'
 
+teamChartDict = {}
 #======================EBR data==========================
 ### EBR related statistic: we just consider for bugs reported by QA APACI
 def EBRStatis(prod):
@@ -73,20 +83,21 @@ def EBRStatis(prod):
         tmpDict[tmpTypeRatio] = RatioConvert(tmp/teamA)
         temInvalidRatio = reso+'Ratio'
         tmpDict[temInvalidRatio] = RatioConvert(tmp/teamI)
-        tmpTypeRatio = reso+'TureAll'
-        tmpDict[tmpTypeRatio] = RatioConvert(tmp/teamA)
-        temInvalidRatio = reso+'TureRatio'
-        tmpDict[temInvalidRatio] = RatioConvert(tmp/teamI)
+        tmpTypeRatiotrue = reso+'InAllRatiotrue'
+        tmpDict[tmpTypeRatiotrue] = tmp/teamA
+        temInvalidRatiotrue = reso+'Ratiotrue'
+        tmpDict[temInvalidRatiotrue] = tmp/teamI
     ## ENHANCEMENT
     temEnhance = prods.find({'product': prod,'creator': {'$in': teamMem},'severity':'Enhancement'}).count()
     tmpDict['EnhanceSeve'] = temEnhance
     tmpDict['EnhanceSeveAllRatio'] = RatioConvert(temEnhance/teamA)
     tmpDict['EnhanceSeveInvalidRatio'] = RatioConvert(temEnhance/teamI)
-    tmpDict['EnhanceSeveTureAll'] = RatioConvert(temEnhance/teamA)
-    tmpDict['EnhanceSeveTureRatio'] = RatioConvert(temEnhance/teamI)
+    tmpDict['EnhanceSeveAllRatiotrue'] = temEnhance/teamA
+    tmpDict['EnhanceSeveInvalidRatiotrue'] = temEnhance/teamI
     
     ## each component invalid/ total invalid ratio
     temCompDict = teamInvalidComp.setdefault(prod,{})
+    teamChartD = teamChartDict.setdefault(prod, {})
     for comp in comps:
         temComp = prods.find({'product': prod,'creator': {'$in': teamMem},'component':comp,'resolution': {'$in':invalidreso}, 'severity':'Enhancement' }).count()
         if temComp == 0:
@@ -96,9 +107,16 @@ def EBRStatis(prod):
         temCompDict[temComINA] = RatioConvert(temComp/teamA)
         temComIN = comp + 'Ratio'
         temCompDict[temComIN] = RatioConvert(temComp/teamI)
+        temComINAtrue = comp + 'InAlldRatiotrue'
+        temCompDict[temComINAtrue] = temComp/teamA
+        teamChartD[temComINAtrue] = temComp/teamA
+        temComINtrue = comp + 'Ratiotrue'
+        temCompDict[temComINtrue] = temComp/teamI
+        teamChartD[temComINtrue] = temComp/teamI
     ## component whose number is less than 5
         # there needs function like sort to make number sequence??
 
+totalChartDict = {}
 #=========================product level==============================
 ### product level bugs statistic
 def CompStatis(prod):
@@ -114,6 +132,7 @@ def CompStatis(prod):
     totalValidRatio[prod] = RatioConvert(totalV/totalA)
 
 ## component valid bug ratio: component valid/ component total
+    totalChartD = totalChartDict.setdefault(prod,{})
     temTotalDict = totalValidComp.setdefault(prod,{})
     for comp in comps:
 # component valid
@@ -128,9 +147,15 @@ def CompStatis(prod):
 # valid ratio
             temTotalCom = comp + 'Ratio'
             temTotalDict[temTotalCom] = RatioConvert(temVComp/temAComp)
+            temTotalComtrue = comp + 'Ratiotrue'
+            temTotalDict[temTotalComtrue] = temVComp/temAComp
+            totalChartD[temTotalComtrue] = temVComp/temAComp
 # valid per component ratio: component valid/ all valid
             temTotalComA = comp + 'InAllRatio'
             temTotalDict[temTotalComA ] = RatioConvert(temVComp/totalV)
+            temTotalComAtrue = comp + 'InAllRatiotrue'
+            temTotalDict[temTotalComAtrue] = temVComp/totalV
+            totalChartD[temTotalComAtrue] = temVComp/totalV
 ## expend: component valid/ all to compare with EBR
             temTotalComAA = comp + 'ValidInAll'
             temTotalDict[temTotalComAA] = RatioConvert(temVComp/totalA)
@@ -167,15 +192,9 @@ def printFD(dicD,item):
 #[printFD(i,dataPara.pop(0)) for i in dataDc]
 
 #=========================Python to chart==============================
-def compSelect(InPr,InD):
-    compList = []
-    for i in InPr:
-        compList = compList + sorted(InD.[i], key=int(itemgetter(1))):[:25]
-    return [i for i in compList[0] if i in compList[1] and i in compList[2]]
 
-compListTeam = compSelect(prod_all,teamInvalidComp)
-compListTotal = compSelect(prod_all,totalValidComp)
-charDFinvT(prod_all,teamInvalidComp,compListTeam,'not')
+compListTeam = compSelect(teamChartDict)
+compListTotal = compSelect(totalChartDict)
 
 ## arg ratio could be 'not' 'Ratio' 'InAllRatio'
 def charDFinvT(InPr,InD,InL,ratio):
@@ -253,6 +272,15 @@ def charDFebr(InPr,AD,VD,picName):
 #    [autolabel(i) for i in rectsL]
     plt.savefig(picName+".png")
 
-#charDFinvT(prod_all,teamInvalidNum,invalidreso)
-#charDFebr(prod_all,teamBugA,teamBugV,"teamEBR")
+#==================charting output========================
+# chart for team valid and all bugs
+charDFebr(prod_all,totalBugA,totalBugV,"teamEBR")
+# chart for team invalid type/ all bugs
+charDFinvT(prod_all,teamInvalidNum,invalidreso,'InAllRatio')
+# chart for team invalid component/ all bugs
+charDFinvT(prod_all,teamInvalidComp,compListTeam,'InAllRatio')
+
+# chart for total valid and all bugs
 charDFebr(prod_all,totalBugA,totalBugV,"totalEBR")
+# chart for total valid component/ all bugs
+charDFinvT(prod_all,totalValidComp,compListTotal,'InAllRatio')
