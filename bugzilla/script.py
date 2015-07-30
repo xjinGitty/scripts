@@ -1,5 +1,8 @@
 #! /usr/bin/python3
 import matplotlib
+import operator
+from operator import itemgetter
+import sys
 matplotlib.use("PS")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,7 +25,7 @@ invalidreso = ['INVALID','WONTFIX','DUPLICATE','FEATURE','WORKSFORME']
 compA = prods.find({'product':{'$in':prod_all} })
 compl = [i['component'] for i in compA]
 comps = set(compl)
-
+print(comps)
 # EBR specific data structure
 teamBugA = {}
 teamBugV = {}
@@ -36,58 +39,69 @@ totalBugV = {}
 totalValidRatio = {}
 totalValidComp = {}
 
+# result store
+
 def RatioConvert(arg):
    return str(arg * 100)[:5]+ '%'
 
-for prod in prod_all:
 #======================EBR data==========================
 ### EBR related statistic: we just consider for bugs reported by QA APACI
-## all bug number
+def EBRStatis(prod):
+    ## all bug number
     teamA = prods.find({'product': prod,'creator': {'$in':teamMem} }).count()
-#    teamAL = [teamAL.expand(i) for i in compA if i['product'] == prod and i['creator'] in teamMem]
+    #    teamAL = [teamAL.expand(i) for i in compA if i['product'] == prod and i['creator'] in teamMem]
     teamBugA[prod] = teamA 
-
-## valid bug number
+    
+    ## valid bug number
     teamV = prods.find({'product': prod,'creator': {'$in': teamMem},'resolution':{'$in': validreso},'severity':{'$ne':'Enhancement'} }).count()
     teamBugV[prod] = teamV 
-
-## EBR ratio
+    
+    ## EBR ratio
     TVratio = RatioConvert(teamV/teamA)
     teamValidRatio[prod] = TVratio
-
-## invalid bug number statistic
-# all invalid bug number
+    
+    ## invalid bug number statistic
+    # all invalid bug number
     teamI = teamA - teamV
-# INVALID # WONTFIX # DUPLICATE # WORKSFORME # bug num
+    # INVALID # WONTFIX # DUPLICATE # WORKSFORME # bug num
     tmpDict = teamInvalidNum.setdefault(prod, {})
     for reso in invalidreso:
         tmp = prods.find({'product': prod,'creator': {'$in': teamMem},'resolution':reso}).count()
         tmpDict[reso] = tmp
-#== each invalid type/all ratio??==#== each invalid type/all invalid ratio??
-        tmpTypeRatio = reso+'InAllratio'
+    #== each invalid type/all ratio??==#== each invalid type/all invalid ratio??
+        tmpTypeRatio = reso+'InAllRatio'
         tmpDict[tmpTypeRatio] = RatioConvert(tmp/teamA)
-        temInvalidRatio = reso+'InAllInvalidRatio'
+        temInvalidRatio = reso+'Ratio'
         tmpDict[temInvalidRatio] = RatioConvert(tmp/teamI)
-## ENHANCEMENT
+        tmpTypeRatio = reso+'TureAll'
+        tmpDict[tmpTypeRatio] = RatioConvert(tmp/teamA)
+        temInvalidRatio = reso+'TureRatio'
+        tmpDict[temInvalidRatio] = RatioConvert(tmp/teamI)
+    ## ENHANCEMENT
     temEnhance = prods.find({'product': prod,'creator': {'$in': teamMem},'severity':'Enhancement'}).count()
     tmpDict['EnhanceSeve'] = temEnhance
     tmpDict['EnhanceSeveAllRatio'] = RatioConvert(temEnhance/teamA)
     tmpDict['EnhanceSeveInvalidRatio'] = RatioConvert(temEnhance/teamI)
-
-## each component invalid/ total invalid ratio
+    tmpDict['EnhanceSeveTureAll'] = RatioConvert(temEnhance/teamA)
+    tmpDict['EnhanceSeveTureRatio'] = RatioConvert(temEnhance/teamI)
+    
+    ## each component invalid/ total invalid ratio
     temCompDict = teamInvalidComp.setdefault(prod,{})
     for comp in comps:
         temComp = prods.find({'product': prod,'creator': {'$in': teamMem},'component':comp,'resolution': {'$in':invalidreso}, 'severity':'Enhancement' }).count()
         if temComp == 0:
             continue
         temCompDict[comp] = temComp
-        temComIN = comp + 'inAllInvalidRatio'
+        temComINA = comp + 'InAlldRatio'
+        temCompDict[temComINA] = RatioConvert(temComp/teamA)
+        temComIN = comp + 'Ratio'
         temCompDict[temComIN] = RatioConvert(temComp/teamI)
-## component whose number is less than 5
-    # there needs function like sort to make number sequence??
+    ## component whose number is less than 5
+        # there needs function like sort to make number sequence??
 
 #=========================product level==============================
 ### product level bugs statistic
+def CompStatis(prod):
 ## all bug number
     totalA = prods.find({'product': prod}).count()
     totalBugA[prod] = totalA
@@ -112,19 +126,22 @@ for prod in prod_all:
             temTotalComAll = comp + 'All'
             temTotalDict[temTotalComAll ] = temAComp 
 # valid ratio
-            temTotalCom = comp + 'validRatio'
+            temTotalCom = comp + 'Ratio'
             temTotalDict[temTotalCom] = RatioConvert(temVComp/temAComp)
 # valid per component ratio: component valid/ all valid
-            temTotalComA = comp + 'ValidInAllValid'
+            temTotalComA = comp + 'InAllRatio'
             temTotalDict[temTotalComA ] = RatioConvert(temVComp/totalV)
 ## expend: component valid/ all to compare with EBR
             temTotalComAA = comp + 'ValidInAll'
             temTotalDict[temTotalComAA] = RatioConvert(temVComp/totalA)
-
+       
+for product in prod_all:
+    EBRStatis(product)
+    CompStatis(product)
 
 #=========================Data Statistic Output==============================
-dataPara = ["teamBugA", "teamBugV", "teamValidRatio", "teamInvalidNum", "teamInvalidComp", "totalBugA", "totalBugV", "totalValidRatio", "totalValidComp"]
-dataDc = [teamBugA, teamBugV, teamValidRatio, teamInvalidNum, teamInvalidComp, totalBugA, totalBugV, totalValidRatio, totalValidComp]
+#dataPara = ["teamBugA", "teamBugV", "teamValidRatio", "teamInvalidNum", "teamInvalidComp", "totalBugA", "totalBugV", "totalValidRatio", "totalValidComp"]
+#dataDc = [teamBugA, teamBugV, teamValidRatio, teamInvalidNum, teamInvalidComp, totalBugA, totalBugV, totalValidRatio, totalValidComp]
 
 def printFD(dicD,item):
     print("\n")
@@ -147,43 +164,46 @@ def printFD(dicD,item):
         else:
             print('{} | {}'.format(i,dicD[i]))
 
-[printFD(i,dataPara.pop(0)) for i in dataDc]
+#[printFD(i,dataPara.pop(0)) for i in dataDc]
 
 #=========================Python to chart==============================
-def chartF(dct):
+def compSelect(InPr,InD):
+    compList = []
+    for i in InPr:
+        compList = compList + sorted(InD.[i], key=int(itemgetter(1))):[:25]
+    return [i for i in compList[0] if i in compList[1] and i in compList[2]]
 
-## team all/ valid/ validRatio
+compListTeam = compSelect(prod_all,teamInvalidComp)
+compListTotal = compSelect(prod_all,totalValidComp)
+charDFinvT(prod_all,teamInvalidComp,compListTeam,'not')
 
-## team invalid type
-
-## team invalid component
-
-
-## total all/ valid/ validRatio
-
-## total valid component
-import numpy as np
-import matplotlib
-#matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-
-def charDF(prodList,tableList,lableList):
-    N = 5
+## arg ratio could be 'not' 'Ratio' 'InAllRatio'
+def charDFinvT(InPr,InD,InL,ratio):
+    N = 6
     ind = np.arange(N)  # the x locations for the groups
     width = 0.25       # the width of the bars
     
     fig, ax = plt.subplots()
-    rects1 = ax.bar(ind, prodList[0], width, color='r')
-    rects2 = ax.bar(ind+width, prodList[1], width, color='y')
-    rects3 = ax.bar(ind+2*width, prodList[2], width, color='b')
-    
-    # add some text for labels, title and axes ticks
+    temColor = ['r','g','y']
+    print("inpr: %s" % InPr)
+    widthDeta = [width*i for i in range(0,20)]
+    rectsL = []
+    for i in InPr:
+        temL = []
+        for j in InL.append(EnhanceSeve):
+            if ratio == "not":
+                temL.append(InD[i][j])
+            else:
+                temL.append(InD[i][j+ratio])
+        rects = ax.bar(ind+widthDeta.pop(0), temL, width, color=temColor.pop())
+        rectsL.append(rects)
     ax.set_ylabel('Bug Number')
-    ax.set_title(lableList.pop(0))
+#    ax.set_title(lableList.pop(0))
+#    ax.set_title("Team invalid type statistic")
     ax.set_xticks(ind+width)
-    ax.set_xticklabels( tableList )
+    ax.set_xticklabels( InL )
     
-    ax.legend( (rects1[0], rects2[0], rects3[0]), prodList)
+    ax.legend(rectsL, InPr)
     
     def autolabel(rects):
         # attach some text labels
@@ -192,10 +212,47 @@ def charDF(prodList,tableList,lableList):
             ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height),
                     ha='center', va='bottom')
     
-    autolabel(rects1)
-    autolabel(rects2)
+#    autolabel(rects1)
+#    [autolabel(i) for i in rectsL]
+    if ratio:
+        plt.savefig("InvalidTypeRatio.png")
+    else:
+        plt.savefig("InvalidType.png")
     
-    #plt.show()
-    plt.savefig("foo1.png")
+def charDFebr(InPr,AD,VD,picName):
+    N = 2
+    ind = np.arange(N)  # the x locations for the groups
+    width = 0.25       # the width of the bars
     
+    fig, ax = plt.subplots()
+    temColor = ['r','g','y']
+    widthDeta = [width*i for i in range(0,20)]
+    rectsL = []
+    for i in InPr:
+        temL = [AD[i], VD[i]]
+        rects = ax.bar(ind+widthDeta.pop(0), temL, width, color=temColor.pop())
+        rectsL.append(rects)
+    
+    # add some text for labels, title and axes ticks
+    ax.set_ylabel('Bug Number')
+#    ax.set_title(lableList.pop(0))
+#    ax.set_title("Team invalid type statistic")
+    ax.set_xticks(ind+width)
+    ax.set_xticklabels(('TeamAllBugs', 'TeamValidBugs'))
+    
+    ax.legend(rectsL, InPr)
+    
+    def autolabel(rects):
+        # attach some text labels
+        for rect in rects:
+            height = rect.get_height()
+            ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height),
+                    ha='center', va='bottom')
 
+#    autolabel(rects1)
+#    [autolabel(i) for i in rectsL]
+    plt.savefig(picName+".png")
+
+#charDFinvT(prod_all,teamInvalidNum,invalidreso)
+#charDFebr(prod_all,teamBugA,teamBugV,"teamEBR")
+charDFebr(prod_all,totalBugA,totalBugV,"totalEBR")
