@@ -25,7 +25,6 @@ invalidreso = ['INVALID','WONTFIX','DUPLICATE','FEATURE','WORKSFORME']
 compA = prods.find({'product':{'$in':prod_all} })
 compl = [i['component'] for i in compA]
 comps = set(compl)
-print(comps)
 # EBR specific data structure
 teamBugA = {}
 teamBugV = {}
@@ -108,6 +107,7 @@ def EBRStatis(prod):
         temComIN = comp + 'Ratio'
         temCompDict[temComIN] = RatioConvert(temComp/teamI)
         temComINAtrue = comp + 'InAlldRatiotrue'
+        print(temComINAtrue)
         temCompDict[temComINAtrue] = temComp/teamA
         teamChartD[temComINAtrue] = temComp/teamA
         temComINtrue = comp + 'Ratiotrue'
@@ -193,8 +193,10 @@ def printFD(dicD,item):
 
 #=========================Python to chart==============================
 
-compListTeam = compSelect(teamChartDict)
-compListTotal = compSelect(totalChartDict)
+pprint(teamChartDict)
+pprint(totalChartDict)
+#compListTeam = compSelect(teamChartDict)
+#compListTotal = compSelect(totalChartDict)
 
 ## arg ratio could be 'not' 'Ratio' 'InAllRatio'
 def charDFinvT(InPr,InD,InL,ratio):
