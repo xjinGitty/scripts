@@ -21,8 +21,11 @@ ax.set_title('Scores by group and gender')
 ax.set_xticks(ind+width)
 ax.set_xticklabels( ('G1', 'G2', 'G3', 'G4', 'G5') )
 
-#ax.legend( (rects1[0], rects2[0]), ('Men', 'Women') )
+#ax.legend( rects2[0],'Women')
+#ax.legend( rects1[0],'Men')
+ax.legend( [rects1[0], rects2[0]], ['Men', 'Women'] )
 
+#ax.legend( (rects2[0]), ('Women') )
 def autolabel(rects):
     # attach some text labels
     for rect in rects:
@@ -33,4 +36,4 @@ def autolabel(rects):
 #autolabel(rects1)
 
 #plt.show()
-plt.savefig("foo1.png")
+plt.savefig("foo.png")
