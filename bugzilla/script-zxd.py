@@ -63,7 +63,7 @@ def plt_comp():
         
         rects = ax.bar(ind, axis_y, 0.5, color=colors[count])        
         count += 1
-    plt.axis([0, 2*N+2, 0, 1.2])
+    plt.axis([ 2*N+2,0, 0, 1.2])
     plt.savefig('foo.png')
 
 plt_comp()
